@@ -1,23 +1,23 @@
 import argparse
 import json
-from openai import OpenAI
+from openrouter_client import OpenRouterClient
 from prompt_templates import instruction_template, knowledge_template, npc_template, math_template
 from datasets import load_dataset
 from tqdm import tqdm
 
 system_prompt = '''You are a helpful assistant.'''
-client = OpenAI()   # set up your config/env/api for calling openai models
+client = OpenRouterClient()  # Initialize OpenRouterClient
 
 def get_response(user_prompt):
-    completion = client.chat.completions.create(
-        model="gpt-4o",
-        temperature=0.7,
+    completion = client.chat.create(
+        model="openai/gpt-4",  # Use an appropriate model supported by OpenRouter
         messages=[
-            {"role": "system", "content":  f"{system_prompt}"},
+            {"role": "system", "content": f"{system_prompt}"},
             {"role": "user", "content": f"{user_prompt}"}
-        ]
+        ],
+        temperature=0.7
     )
-    return completion.choices[0].message.content
+    return completion['choices'][0]['message']['content']
 
 def main(args):
     # Load the appropriate template
@@ -42,20 +42,20 @@ def main(args):
         for persona in tqdm(persona_dataset['persona']):
             persona = persona.strip()
             user_prompt = template.format(persona=persona)
-            gpt4o_out_text = get_response(user_prompt)
-            o = {"user_prompt": user_prompt, "input persona": persona, "synthesized text": gpt4o_out_text}
+            openrouter_out_text = get_response(user_prompt)
+            o = {"user_prompt": user_prompt, "input persona": persona, "synthesized text": openrouter_out_text}
             out.write(json.dumps(o, ensure_ascii=False) + '\n')
 
     print(f"Outputted the results to: {args.output_path}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Synthesize text using a specified model and template.")
+    parser = argparse.ArgumentParser(description="Synthesize text using OpenRouter and a specified template.")
     parser.add_argument('--sample_size', type=int, default=0, help='Number of samples to process from the dataset; Set it to 0 if you want to use the full set of 200k personas.')
     parser.add_argument(
-        '--template', 
-        type=str, 
-        required=True, 
-        choices=['instruction', 'knowledge', 'npc', 'math'], 
+        '--template',
+        type=str,
+        required=True,
+        choices=['instruction', 'knowledge', 'npc', 'math'],
         help=(
             "Prompt templates. Choose from 'instruction', 'knowledge', 'math' or 'npc'. "
             "You can also add more customized templates in prompt_templates.py"
