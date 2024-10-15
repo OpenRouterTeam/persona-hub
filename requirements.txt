@@ -2,4 +2,3 @@ datasets
 transformers
 openai
 tqdm
-openrouter-client
